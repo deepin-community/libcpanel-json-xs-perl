@@ -1,0 +1,302 @@
+libcpanel-json-xs-perl (4.27-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Debian Janitor ]
+  * Apply multi-arch hints.
+    + libcpanel-json-xs-perl: Add Multi-Arch: same.
+  * Remove constraints unnecessary since buster
+    * Build-Depends: Drop versioned constraint on libjson-pp-perl.
+
+  [ gregor herrmann ]
+  * Import upstream version 4.27.
+
+ -- gregor herrmann <gregoa@debian.org>  Fri, 15 Oct 2021 18:10:38 +0200
+
+libcpanel-json-xs-perl (4.26-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.26.
+  * Declare compliance with Debian Policy 4.6.0.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 22 Aug 2021 22:56:22 +0200
+
+libcpanel-json-xs-perl (4.25-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.25.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 01 Nov 2020 16:26:32 +0100
+
+libcpanel-json-xs-perl (4.24-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.24.
+  * Remove unused lintian override.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 04 Oct 2020 16:41:58 +0200
+
+libcpanel-json-xs-perl (4.23-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.23.
+  * Add another test dependency to enable an additional test.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 06 Sep 2020 14:03:25 +0200
+
+libcpanel-json-xs-perl (4.21-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.21.
+  * Add new versioned build dependency.
+
+ -- gregor herrmann <gregoa@debian.org>  Mon, 17 Aug 2020 03:26:03 +0200
+
+libcpanel-json-xs-perl (4.20-1) unstable; urgency=medium
+
+  * Team upload.
+  * Update 'DEB_BUILD_MAINT_OPTIONS = hardening=+bindnow' to '=+all'.
+  * Import upstream version 4.20.
+  * Bump debhelper-compat to 13.
+  * Update lintian override (renamed tag).
+
+ -- gregor herrmann <gregoa@debian.org>  Thu, 13 Aug 2020 02:10:54 +0200
+
+libcpanel-json-xs-perl (4.19-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.19
+  * Declare compliance with Debian Policy 4.5.0.
+  * Set Rules-Requires-Root: no.
+  * Set upstream metadata fields: Bug-Submit, Repository, Repository-
+    Browse.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 08 Feb 2020 18:39:29 +0100
+
+libcpanel-json-xs-perl (4.18-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.18.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 22 Dec 2019 15:28:20 +0100
+
+libcpanel-json-xs-perl (4.17-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.17.
+
+ -- gregor herrmann <gregoa@debian.org>  Wed, 06 Nov 2019 21:47:21 +0100
+
+libcpanel-json-xs-perl (4.15-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.15.
+  * Update Build-Depends for cross builds.
+  * Annotate test-only build dependencies with <!nocheck>.
+  * Declare compliance with Debian Policy 4.4.1.
+  * debian/watch: use uscan version 4.
+  * Remove obsolete fields Name, Contact from debian/upstream/metadata.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 02 Nov 2019 02:25:10 +0100
+
+libcpanel-json-xs-perl (4.12-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.12.
+  * Declare compatibility with Debian Policy 4.4.0.
+  * Bump debhelper compatibility version to 12.
+
+ -- intrigeri <intrigeri@debian.org>  Thu, 18 Jul 2019 18:52:00 +0000
+
+libcpanel-json-xs-perl (4.09-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.09.
+  * Declare compliance with Debian Policy 4.3.0.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 17 Feb 2019 18:19:46 +0100
+
+libcpanel-json-xs-perl (4.08-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.08.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 01 Dec 2018 18:50:43 +0100
+
+libcpanel-json-xs-perl (4.07-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.07.
+  * Update lintian override (line number).
+
+ -- gregor herrmann <gregoa@debian.org>  Fri, 09 Nov 2018 21:13:46 +0100
+
+libcpanel-json-xs-perl (4.06-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.06.
+  * Declare compliance with Debian Policy 4.2.1.
+
+ -- gregor herrmann <gregoa@debian.org>  Fri, 07 Sep 2018 19:25:19 +0200
+
+libcpanel-json-xs-perl (4.05-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.05.
+  * Declare compliance with Debian Policy 4.2.0.
+  * Refresh lintian override (changed line number).
+
+ -- gregor herrmann <gregoa@debian.org>  Tue, 21 Aug 2018 21:49:05 +0200
+
+libcpanel-json-xs-perl (4.04-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.04
+  * Bump debhelper compatibility level to 11
+  * Declare compliance with Debian Policy 4.1.5
+
+ -- Lucas Kanashiro <kanashiro@debian.org>  Sun, 22 Jul 2018 23:16:18 -0300
+
+libcpanel-json-xs-perl (4.02-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Damyan Ivanov ]
+  * declare conformance with Policy 4.1.3 (no changes needed)
+
+  [ Salvatore Bonaccorso ]
+  * Update Vcs-* headers for switch to salsa.debian.org
+
+  [ gregor herrmann ]
+  * Import upstream version 4.02
+  * debian/copyright: add third-party copyright holder.
+  * Bump debhelper compatibility level to 10.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 10 Mar 2018 22:02:21 +0100
+
+libcpanel-json-xs-perl (3.0239-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 3.0239.
+  * debian/control: declare compliance with Debian Policy 4.1.1.
+  * Update upstream contact in d/copyright and d/u/metadata.
+  * Add lintian override for long code line.
+
+ -- Nuno Carvalho <smash@cpan.org>  Tue, 03 Oct 2017 11:12:24 +0100
+
+libcpanel-json-xs-perl (3.0225-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 3.0225.
+
+ -- gregor herrmann <gregoa@debian.org>  Wed, 28 Dec 2016 20:40:23 +0100
+
+libcpanel-json-xs-perl (3.0220-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 3.0220.
+  * Update years of upstream copyright.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 29 Oct 2016 18:54:30 +0200
+
+libcpanel-json-xs-perl (3.0217-1) unstable; urgency=medium
+
+  * Team upload.
+  * debian/copyright: change Copyright-Format 1.0 URL to HTTPS.
+  * Import upstream version 3.0217.
+  * Add stanza for bin/cpanel_json_xs to debian/copyright.
+  * Add debian/duck-overrides for a website with a certificate problem.
+
+ -- gregor herrmann <gregoa@debian.org>  Fri, 01 Jul 2016 17:19:19 +0200
+
+libcpanel-json-xs-perl (3.0213-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Salvatore Bonaccorso ]
+  * debian/control: Use HTTPS transport protocol for Vcs-Git URI
+
+  [ gregor herrmann ]
+  * Import upstream version 3.0213.
+  * debian/rules: set bindnow linker flag.
+  * Declare compliance with Debian Policy 3.9.8.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 30 Apr 2016 11:44:35 +0200
+
+libcpanel-json-xs-perl (3.0211-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 3.0211.
+
+ -- gregor herrmann <gregoa@debian.org>  Fri, 22 Jan 2016 22:00:44 +0100
+
+libcpanel-json-xs-perl (3.0210-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 3.0210.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 05 Dec 2015 21:09:23 +0100
+
+libcpanel-json-xs-perl (3.0207-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 3.0207.
+
+ -- gregor herrmann <gregoa@debian.org>  Wed, 02 Dec 2015 20:29:17 +0100
+
+libcpanel-json-xs-perl (3.0205-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Lucas Kanashiro ]
+  * Import upstream version 3.0205
+  * Update upstream contact in metadata
+  * Update upstream copyright and contact in debian/copyright
+
+  [ gregor herrmann ]
+  * Add libmojolicious-perl to Build-Depends-Indep. Used in a test.
+
+ -- Lucas Kanashiro <kanashiro.duarte@gmail.com>  Mon, 30 Nov 2015 11:29:04 -0200
+
+libcpanel-json-xs-perl (3.0115-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Salvatore Bonaccorso ]
+  * Update Vcs-Browser URL to cgit web frontend
+
+  [ gregor herrmann ]
+  * Add debian/upstream/metadata
+  * Import upstream version 3.0115
+  * Mark package as autopkgtest-able.
+  * Declare compliance with Debian Policy 3.9.6.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 27 Jun 2015 23:36:48 +0200
+
+libcpanel-json-xs-perl (3.0104-1) unstable; urgency=medium
+
+  * Import Upstream version 3.0104
+  * Add build-dependencies on JSON, JSON::XS and Test::LeakTrace to enable
+    more tests
+
+ -- Florian Schlichting <fsfs@debian.org>  Thu, 01 May 2014 21:27:13 +0200
+
+libcpanel-json-xs-perl (3.0103-1) unstable; urgency=medium
+
+  * Import Upstream version 3.0103
+
+ -- Florian Schlichting <fsfs@debian.org>  Fri, 25 Apr 2014 01:12:30 +0200
+
+libcpanel-json-xs-perl (2.3404-1) unstable; urgency=medium
+
+  * Team upload.
+  * New upstream release.
+  * Drop pod-spelling.patch, applied upstream.
+
+ -- gregor herrmann <gregoa@debian.org>  Fri, 14 Feb 2014 21:39:07 +0100
+
+libcpanel-json-xs-perl (2.3403-1) unstable; urgency=low
+
+  * Initial Release. (Closes: #730576)
+
+ -- Florian Schlichting <fsfs@debian.org>  Tue, 26 Nov 2013 20:55:06 +0100
