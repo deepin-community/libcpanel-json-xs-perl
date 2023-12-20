@@ -88,15 +88,17 @@
 #define HAVE_NEG_NAN
 #define STR_NEG_INF "---"
 #define STR_NEG_NAN "?"
-#elif defined(_AIX)
+#elif defined(_AIX) || defined(_AIX50)
 /* xlC compiler: __TOS_AIX__ FIXME: This does not work yet. GH #165 */
-#define STR_INF "INF.0"
-#define STR_INF2 "-INF.0"
+#define STR_INF "INF"
+#define STR_INF2 "INF.0"
+#define HAVE_NEG_NAN
+#define STR_NEG_INF "-INF"
 #define HAVE_NEG_NAN
 #define HAVE_QNAN
 #define STR_NAN "NaN"
-//#define STR_QNAN "NaNQ"
-#define STR_QNAN "NANQ"
+#define STR_QNAN "NaNQ"
+//#define STR_QNAN "NANQ"
 #else
 #define STR_INF "inf"
 #define STR_NAN "nan"
@@ -301,6 +303,9 @@ mingw_modfl(long double x, long double *ip)
 # endif
 #endif
 
+// i.e. "JSON" in big-endian
+#define JSON_MAGIC 0x4A534F4E
+
 /* types */
 #define JSON_TYPE_SCALAR       0x0000
 #define JSON_TYPE_BOOL         0x0001
@@ -352,6 +357,8 @@ mingw_modfl(long double x, long double *ip)
 #define F_ALLOW_DUPKEYS   0x00800000UL
 #define F_REQUIRE_TYPES   0x01000000UL
 #define F_TYPE_ALL_STRING 0x02000000UL
+#define F_DUPKEYS_AS_AREF 0x04000000UL
+#define F_DUPKEYS_FIRST   0x08000000UL /* internal only */
 #define F_HOOK            0x80000000UL /* some hooks exist, so slow-path processing */
 
 #define F_PRETTY    F_INDENT | F_SPACE_BEFORE | F_SPACE_AFTER
@@ -432,6 +439,9 @@ typedef struct {
   int incr_nest;   /* {[]}-nesting level */
   unsigned char incr_mode;
   unsigned char infnan_mode;
+
+  /* corruption check */
+  U32 magic;
 } JSON;
 
 INLINE void
@@ -440,11 +450,11 @@ json_init (JSON *json)
   Zero (json, 1, JSON);
   json->max_depth     = 512;
   json->indent_length = INDENT_STEP;
+  json->magic = JSON_MAGIC;
 }
 
-/* dTHX/threads TODO*/
-/* END dtor call not needed, all of these *s refcnts are owned by the stash
-  treem not C code */
+/* dTHX/threads TODO
+   END dtor not needed for these, all of these *s refcnts are owned by the stash. */
 static void
 init_MY_CXT(pTHX_ my_cxt_t * cxt)
 {
@@ -467,6 +477,15 @@ init_MY_CXT(pTHX_ my_cxt_t * cxt)
 
 /*/////////////////////////////////////////////////////////////////////////// */
 /* utility functions */
+
+/* Validate the JSON struct which might get corrupted by wrong FREEZE/THAW
+   methods, or other serializers, or corrupting our magic object.
+   E.g. https://github.com/rurban/Cpanel-JSON-XS/issues/192 */
+INLINE bool
+json_validate (JSON *json)
+{
+    return json->magic == JSON_MAGIC;
+}
 
 /* Unpacks the 2 boolean objects from the global references */
 INLINE SV *
@@ -505,11 +524,14 @@ shrink (pTHX_ SV *sv)
     }
 }
 
-/* decode an utf-8 character and return it, or (UV)-1 in */
-/* case of an error. */
-/* we special-case "safe" characters from U+80 .. U+7FF, */
-/* but use the very good perl function to parse anything else. */
-/* note that we never call this function for a ascii codepoints */
+/* Decode an utf-8 character and return it, or (UV)-1 in
+   case of an error.
+   We special-case "safe" characters from U+80 .. U+7FF,
+   but use the very good perl function until 5.36 to parse anything else.
+   note that we never call this function for an ascii codepoints.
+   With 5.36 perl5 removed the API to decode utf8 again with flags for relaxed,
+   so we have to hack around this regression again.
+*/
 INLINE UV
 decode_utf8 (pTHX_ unsigned char *s, STRLEN len, int relaxed, STRLEN *clen)
 {
@@ -523,19 +545,13 @@ decode_utf8 (pTHX_ unsigned char *s, STRLEN len, int relaxed, STRLEN *clen)
   else {
 /* Since perl 5.14 we can disallow illegal unicode above U+10FFFF.
    Before we could only warn with warnings 'utf8'.
-   We accept only valid unicode, unless we are in the relaxed mode. */
-/*    
-   perl 5.32 deprecated utf8n_to_uvuni accepting illegal unicode, so relaxed does not
-   allow such illegal unicode anymore, rather throws a warning in the 'utf8' category.
-   Still looking for a way to get the old correct behavior. */
-/*
-#if PERL_VERSION > 31
-    UV c = utf8_to_uvchr_buf (s, &s[len+1], clen);
-    / * UV c = valid_utf8_to_uvchr (s, clen); * /
-    PERL_UNUSED_ARG(relaxed);
-#elif PERL_VERSION > 12
+   We accept only valid unicode, unless we are in the relaxed mode,
+   which allows SUPER, above U+10FFFF.
 */
-#if PERL_VERSION > 12
+#if PERL_VERSION > 36
+    UV c = utf8n_to_uvchr (s, len, clen,
+                          UTF8_CHECK_ONLY | (relaxed ? 0 : UTF8_DISALLOW_SUPER));
+#elif PERL_VERSION > 12
     UV c = utf8n_to_uvuni (s, len, clen,
                            UTF8_CHECK_ONLY | (relaxed ? 0 : UTF8_DISALLOW_SUPER));
 #elif PERL_VERSION >= 8
@@ -727,11 +743,12 @@ json_atof_scan1 (const char *s, NV *accum, int *expo, int postdp, int maxdepth)
         }
     }
 
-  /* This relies greatly on the quality of the pow () */
-  /* implementation of the platform, but a good */
-  /* implementation is hard to beat. */
-  /* (IEEE 754 conformant ones are required to be exact) */
-  if (postdp) *expo -= eaccum;
+    /* This relies greatly on the quality of the pow ()
+       implementation of the platform, but a good
+       implementation is hard to beat.
+       (IEEE 754 conformant ones are required to be exact) */
+    if (postdp)
+      *expo -= eaccum;
 #ifdef HAVE_NO_POWL
   /* powf() unfortunately is not accurate enough */
   *accum += uaccum * fs_powEx(10., *expo );
@@ -1403,8 +1420,7 @@ encode_hv (pTHX_ enc_t *enc, HV *hv, SV *typesv)
                   cop.cop_hints &= ~HINT_BYTES;
 #endif
 
-                  ENTER;
-                  SAVETMPS;
+                  ENTER; SAVETMPS;
 
                   SAVEVPTR (PL_curcop);
                   PL_curcop = &cop;
@@ -1574,14 +1590,15 @@ encode_stringify(pTHX_ enc_t *enc, SV *sv, int isref)
       str = SvPVutf8_force(pv, len);
     }
 #endif
-    if (!len) {
+    if (!len && !SvOBJECT (sv)) {
       encode_const_str (aTHX_ enc, "null", 4, 0);
       SvREFCNT_dec(pv);
       return;
     }
   } else {
     /* manually call all possible magic on AV, HV, FM */
-    if (SvGMAGICAL(sv)) mg_get(sv);
+    if (SvGMAGICAL(sv))
+      mg_get(sv);
     if (MyAMG(sv)) { /* force a RV here */
       SV* rv = newRV(SvREFCNT_inc(sv));
 #if PERL_VERSION <= 8
@@ -1601,7 +1618,7 @@ encode_stringify(pTHX_ enc_t *enc, SV *sv, int isref)
       if (pv && SvPOK(pv)) {
         str = SvPVutf8_force(pv, len);
         encode_ch (aTHX_ enc, '"');
-        encode_str (aTHX_ enc, str, len, 0);
+        encode_str (aTHX_ enc, str, len, 1);
         encode_ch (aTHX_ enc, '"');
         SvREFCNT_dec(rv);
         return;
@@ -1644,7 +1661,7 @@ encode_stringify(pTHX_ enc_t *enc, SV *sv, int isref)
   else {
     if (isref != 1)
       encode_ch (aTHX_ enc, '"');
-    encode_str (aTHX_ enc, str, len, 0);
+    encode_str (aTHX_ enc, str, len, 1);
     if (isref != 1)
       encode_ch (aTHX_ enc, '"');
   }
@@ -1727,7 +1744,8 @@ encode_rv (pTHX_ enc_t *enc, SV *rv)
           dSP;
           int count, items;
 
-          ENTER; SAVETMPS; SAVESTACK_POS (); PUSHMARK (SP);
+          ENTER; SAVETMPS;
+          PUSHMARK (SP);
           EXTEND (SP, 2);
           PUSHs (rv);
           PUSHs (MY_CXT.sv_json);
@@ -1736,6 +1754,9 @@ encode_rv (pTHX_ enc_t *enc, SV *rv)
           count = call_sv ((SV *)GvCV (method), G_ARRAY);
           items = count;
           SPAGAIN;
+
+          if (!json_validate (&enc->json))
+              croak (NULL);
 
           /* catch this surprisingly common error */
           if (SvROK (TOPs) && SvRV (TOPs) == sv)
@@ -1770,8 +1791,8 @@ encode_rv (pTHX_ enc_t *enc, SV *rv)
         {
           dSP;
 
-          ENTER; SAVETMPS; PUSHMARK (SP);
-
+          ENTER; SAVETMPS;
+          PUSHMARK (SP);
           XPUSHs (rv);
 
           /* calling with G_SCALAR ensures that we always get a 1 return value */
@@ -1779,6 +1800,9 @@ encode_rv (pTHX_ enc_t *enc, SV *rv)
           call_sv ((SV *)GvCV (method), G_SCALAR);
           SPAGAIN;
           
+          if (!json_validate (&enc->json))
+              croak (NULL);
+
           /* catch this surprisingly common error */
           if (SvROK (TOPs) && SvRV (TOPs) == sv)
             croak ("%s::TO_JSON method returned same object as was passed instead of a new one", HvNAME (SvSTASH (sv)));
@@ -2197,6 +2221,9 @@ encode_sv (pTHX_ enc_t *enc, SV *sv, SV *typesv)
             }
 #endif
 
+/* #if defined(_AIX) || defined(_AIX50)
+ * (void)fprintf (stderr, "#|# >%s<\n", enc->cur);
+ * #endif */
 #ifdef STR_INF4
           if (UNLIKELY(strEQc(enc->cur, STR_INF)
                        || strEQc(enc->cur, STR_INF2)
@@ -2214,6 +2241,13 @@ encode_sv (pTHX_ enc_t *enc, SV *sv, SV *typesv)
             inf_or_nan = 2;
           else if (UNLIKELY(strEQc(enc->cur, STR_NEG_NAN)))
             inf_or_nan = 3;
+#endif
+#if defined(_AIX) || defined(_AIX50)
+          else if (UNLIKELY(strEQc(enc->cur, STR_INF)
+                         || strEQc(enc->cur, STR_INF2)))
+            inf_or_nan = 1;
+          else if (UNLIKELY(strEQc(enc->cur, STR_NEG_INF)))
+            inf_or_nan = 2;
 #endif
           else if
 #ifdef HAVE_QNAN
@@ -2340,9 +2374,7 @@ encode_sv (pTHX_ enc_t *enc, SV *sv, SV *typesv)
                   dSP;
                   int is_negative;
 
-                  ENTER;
-                  SAVETMPS;
-
+                  ENTER; SAVETMPS;
                   PUSHMARK (SP);
                   XPUSHs (sv);
                   PUTBACK;
@@ -2482,6 +2514,9 @@ encode_sv (pTHX_ enc_t *enc, SV *sv, SV *typesv)
               eval_sv (pv, G_SCALAR);
               SvREFCNT_dec (pv);
 
+              if (!json_validate (&enc->json))
+                  croak (NULL);
+              
               /* rethrow current error */
               errsv = ERRSV;
               if (SvROK (errsv))
@@ -2700,6 +2735,8 @@ decode_comment (dec_t *dec)
 INLINE void
 decode_ws (dec_t *dec)
 {
+  if (dec->cur >= dec->end)
+    return;
   for (;;)
     {
       char ch = *dec->cur;
@@ -2726,7 +2763,7 @@ decode_ws (dec_t *dec)
 
 #define ERR(reason) SB dec->err = reason; goto fail; SE
 
-#define EXPECT_CH(ch) SB \
+#define EXPECT_CH(ch) SB        \
   if (*dec->cur != ch)		\
     ERR (# ch " expected");	\
   ++dec->cur;			\
@@ -3352,7 +3389,16 @@ _decode_str (pTHX_ dec_t *dec, char endstr)
                   case 'n': ++dec_cur; *cur++ = '\012'; break;
                   case 'f': ++dec_cur; *cur++ = '\014'; break;
                   case 'r': ++dec_cur; *cur++ = '\015'; break;
-
+                  case '\'':
+                    {
+                      if( dec->json.flags & F_ALLOW_SQUOTE ) {
+                        *cur++ = *dec_cur++;
+                      } else {
+                        --dec_cur;
+                        ERR ("illegal backslash escape sequence in string");
+                      }
+                      break;
+                    }
                   case 'x':
 		    {
 		      UV c;
@@ -3792,6 +3838,34 @@ fail:
   return 0;
 }
 
+static void
+hv_store_str (pTHX_ HV* hv, char *key, U32 len, SV* value)
+{
+  U32 i;
+#if PERL_VERSION > 8 || (PERL_VERSION == 8 && PERL_SUBVERSION >= 9)
+  int utf8 = 0;
+#else
+  I32 ulen = (I32)len;
+#endif
+  /* check utf8 hash key */
+  for (i=0; i<len; i++) {
+    if ((signed char)key[i] < 0) {
+#if PERL_VERSION > 8 || (PERL_VERSION == 8 && PERL_SUBVERSION >= 9)
+      utf8 = HVhek_UTF8;
+#else
+      ulen = -(I32)len;
+#endif
+      break;
+    }
+  }
+#if PERL_VERSION > 8 || (PERL_VERSION == 8 && PERL_SUBVERSION >= 9)
+  hv_common (hv, NULL, key, len, utf8,
+             HV_FETCH_ISSTORE|HV_FETCH_JUST_SV, value, 0);
+#else
+  hv_store (hv, key, ulen, value, 0);
+#endif
+}
+
 static SV *
 decode_hv (pTHX_ dec_t *dec, SV *typesv)
 {
@@ -3802,6 +3876,8 @@ decode_hv (pTHX_ dec_t *dec, SV *typesv)
   int allow_squote = dec->json.flags & F_ALLOW_SQUOTE;
   int allow_barekey = dec->json.flags & F_ALLOW_BAREKEY;
   int allow_dupkeys = dec->json.flags & F_ALLOW_DUPKEYS;
+  int dupkeys_as_arrayref = dec->json.flags & F_DUPKEYS_AS_AREF;
+  int dupkeys_first = dec->json.flags & F_DUPKEYS_FIRST;
   char endstr = '"';
 
   DEC_INC_DEPTH;
@@ -3832,11 +3908,11 @@ decode_hv (pTHX_ dec_t *dec, SV *typesv)
           }
           else if (*dec->cur == 0x27)
             endstr = 0x27;
-          is_bare=0;
+          is_bare = 0;
           ++dec->cur;
         } else {
           EXPECT_CH ('"');
-          is_bare=0;
+          is_bare = 0;
         }
 
         /* heuristic: assume that */
@@ -3847,43 +3923,76 @@ decode_hv (pTHX_ dec_t *dec, SV *typesv)
         {
           SV *value;
           SV *value_typesv = NULL;
+          SV *old_value = NULL;
           char *p = dec->cur;
           char *e = p + 24; /* only try up to 24 bytes */
+          bool key_exists;
 
           for (;;)
             {
               /* the >= 0x80 is false on most architectures */
-              if (!is_bare &&
+              if (UNLIKELY(!is_bare &&
                   (p == e || *p < 0x20 || *(U8*)p >= 0x80 || *p == '\\'
-                   || allow_squote))
+                   || allow_squote)))
                 {
                   /* slow path, back up and use decode_str */
                   /* utf8 hash keys are handled here */
-                  SV *key = _decode_str (aTHX_ dec, endstr);
-                  if (!key)
+                  SV *keysv = _decode_str (aTHX_ dec, endstr);
+                  if (!keysv)
                     goto fail;
 
-                  if (!allow_dupkeys && UNLIKELY(hv_exists_ent (hv, key, 0))) {
-                    ERR ("Duplicate keys not allowed");
+                  key_exists = hv_exists_ent (hv, keysv, 0);
+                  if (UNLIKELY (key_exists)) {
+                    if (!allow_dupkeys)
+                      ERR ("Duplicate keys not allowed");
+                    else if (dupkeys_as_arrayref) {
+                      // extend the value to arrayref or push
+                      old_value = HeVAL(hv_fetch_ent (hv, keysv, 0, 0));
+                      SvREFCNT_inc (old_value);
+                      if (dupkeys_first) {
+                        AV *av = newAV ();
+                        av_extend (av, 2);
+                        if (av_store(av, 0, old_value))
+                          old_value = newRV ((SV*)av);
+                      } else if (SvTYPE (old_value) != SVt_RV &&
+                                 SvTYPE (SvRV (old_value)) != SVt_PVAV) {
+                        // not an AvREF
+                        ERR ("Invalid dupkeys_as_arrayref hash key");
+                      }
+                    } // else overwrite it below
                   }
-                  decode_ws (dec); EXPECT_CH (':');
+                  decode_ws (dec);
+                  EXPECT_CH (':');
                   decode_ws (dec);
 
                   if (typesv)
                     {
                       value_typesv = newSV (0);
-                      (void)hv_store_ent (typehv, key, value_typesv, 0);
+                      (void)hv_store_ent (typehv, keysv, value_typesv, 0);
                     }
 
                   value = decode_sv (aTHX_ dec, value_typesv);
                   if (!value)
                     {
-                      SvREFCNT_dec (key);
+                      SvREFCNT_dec (keysv);
                       goto fail;
                     }
 
-                  (void)hv_store_ent (hv, key, value, 0);
-                  SvREFCNT_dec (key);
+                  if (UNLIKELY (key_exists && dupkeys_as_arrayref && old_value))
+                    {
+                      av_push ((AV*)SvRV (old_value), value);
+                      (void)hv_store_ent (hv, keysv, old_value, 0);
+                      if (dupkeys_first)
+                        {
+                          dupkeys_first = 0;
+                          dec->json.flags &= ~F_DUPKEYS_FIRST;
+                        }
+                    }
+                  else
+                    {
+                      (void)hv_store_ent (hv, keysv, value, 0);
+                    }
+                  SvREFCNT_dec (keysv);
 
                   break;
                 }
@@ -3895,19 +4004,40 @@ decode_hv (pTHX_ dec_t *dec, SV *typesv)
                   /* fast path, got a simple key */
                   char *key = dec->cur;
                   U32 len = p - key;
-                  assert(p >= key && p - key < I32_MAX);
+                  assert(p >= key && (p - key) < I32_MAX);
 #if PTRSIZE >= 8
                   /* hv_store can only handle I32 len, which might overflow */
                   /* perl5 just silently truncates it, cperl panics */
                   if (UNLIKELY(p - key > I32_MAX))
                     ERR ("Hash key too large");
 #endif
-                  if (!allow_dupkeys && UNLIKELY(hv_exists (hv, key, len))) {
-                    ERR ("Duplicate keys not allowed");
+                  key_exists = hv_exists (hv, key, len);
+                  if (UNLIKELY (key_exists)) {
+                    if (!allow_dupkeys)
+                      ERR ("Duplicate keys not allowed");
+                    else if (dupkeys_as_arrayref) {
+                      // extend the value to arrayref or push
+                      SV** rv = hv_fetch (hv, key, len, 0);
+                      old_value = *rv;
+                      SvREFCNT_inc (old_value);
+                      if (dupkeys_first) {
+                        AV *av = newAV ();
+                        av_extend (av, 2);
+                        if (av_store(av, 0, old_value))
+                          old_value = newRV ((SV*)av);
+                      } else if (SvTYPE (old_value) != SVt_RV &&
+                                 SvTYPE (SvRV (old_value)) != SVt_PVAV) {
+                        // not an AvREF
+                        ERR ("Invalid dupkeys_as_arrayref hash key");
+                      }
+                    } // else overwrite it below
                   }
 
                   dec->cur = p + 1;
-                  decode_ws (dec); if (*p != ':') EXPECT_CH (':');
+                  if (dec->cur >= dec->end)
+                    EXPECT_CH (':');
+                  decode_ws (dec);
+                  if (*p != ':') EXPECT_CH (':');
                   decode_ws (dec);
 
                   if (typesv)
@@ -3920,17 +4050,27 @@ decode_hv (pTHX_ dec_t *dec, SV *typesv)
                   if (!value)
                     goto fail;
 
-                  /* Note: not a utf8 hash key */
-#if PERL_VERSION > 8 || (PERL_VERSION == 8 && PERL_SUBVERSION >= 9)
-                  hv_common (hv, NULL, key, len, 0,
-                             HV_FETCH_ISSTORE|HV_FETCH_JUST_SV, value, 0);
-#else
-                  hv_store (hv, key, len, value, 0);
-#endif
+                  if (UNLIKELY (key_exists && dupkeys_as_arrayref))
+                    {
+                      av_push ((AV*)SvRV (old_value), value);
+                      hv_store_str (aTHX_ hv, key, len, old_value);
+                      if (dupkeys_first)
+                        {
+                          dupkeys_first = 0;
+                          dec->json.flags &= ~F_DUPKEYS_FIRST;
+                        }
+                    }
+                  else
+                    {
+                      hv_store_str (aTHX_ hv, key, len, value);
+                    }
                   break;
                 }
-
               ++p;
+              if (p > dec->end) {
+                dec->cur = p;
+                EXPECT_CH (':');
+              }
             }
         }
 
@@ -3980,11 +4120,15 @@ decode_hv (pTHX_ dec_t *dec, SV *typesv)
               dSP;
               I32 count;
 
-              ENTER; SAVETMPS; SAVESTACK_POS (); PUSHMARK (SP);
+              ENTER; SAVETMPS;
+              PUSHMARK (SP);
               XPUSHs (HeVAL (he));
               sv_2mortal (sv);
 
               PUTBACK; count = call_sv (HeVAL (cb), G_ARRAY); SPAGAIN;
+
+              if (!json_validate (&dec->json))
+                  croak (NULL);
 
               if (count == 1)
                 {
@@ -4004,10 +4148,14 @@ decode_hv (pTHX_ dec_t *dec, SV *typesv)
           dSP;
           I32 count;
 
-          ENTER; SAVETMPS; SAVESTACK_POS (); PUSHMARK (SP);
+          ENTER; SAVETMPS;
+          PUSHMARK (SP);
           XPUSHs (sv_2mortal (sv));
 
           PUTBACK; count = call_sv (dec->json.cb_object, G_ARRAY); SPAGAIN;
+
+          if (!json_validate (&dec->json))
+              croak (NULL);
 
           if (count == 1)
             {
@@ -4083,7 +4231,8 @@ decode_tag (pTHX_ dec_t *dec)
     if (!method)
       ERR ("cannot decode perl-object (package does not have a THAW method)");
 
-    ENTER; SAVETMPS; SAVESTACK_POS (); PUSHMARK (SP);
+    ENTER; SAVETMPS;
+    PUSHMARK (SP);
     EXTEND (SP, len + 2);
     /* we re-bless the reference to get overload and other niceties right */
     PUSHs (tag);
@@ -4096,6 +4245,8 @@ decode_tag (pTHX_ dec_t *dec)
     call_sv ((SV *)GvCV (method), G_SCALAR);
     SPAGAIN;
 
+    if (!json_validate (&dec->json))
+        croak (NULL);
     SvREFCNT_dec (tag);
     SvREFCNT_dec (val);
     sv = SvREFCNT_inc (POPs);
@@ -4254,6 +4405,8 @@ decode_json (pTHX_ SV *string, JSON *json, STRLEN *offset_return, SV *typesv)
   int converted = 0;
   /*dMY_CXT;*/
 
+  if (!json_validate (json))
+      croak (NULL);
   /* work around bugs in 5.10 where manipulating magic values
    * makes perl ignore the magic in subsequent accesses.
    * also make a copy of non-PV values, to get them into a clean
@@ -4380,11 +4533,16 @@ decode_json (pTHX_ SV *string, JSON *json, STRLEN *offset_return, SV *typesv)
   if (!sv)
     {
       SV *uni = sv_newmortal ();
-
+      COP cop = *PL_curcop;
+      if (dec.cur >= dec.end) // overshoot
+        {
+          croak ("%s, at character offset %d",
+                 dec.err,
+                 (int)ptr_to_index (aTHX_ string, dec.cur - SvPVX(string)));
+        }
 #if PERL_VERSION >= 8
       /* horrible hack to silence warning inside pv_uni_display */
       /* TODO: Can be omitted with newer perls */
-      COP cop = *PL_curcop;
       cop.cop_warnings = pWARN_NONE;
       ENTER;
       SAVEVPTR (PL_curcop);
@@ -4394,12 +4552,14 @@ decode_json (pTHX_ SV *string, JSON *json, STRLEN *offset_return, SV *typesv)
 #endif
       croak ("%s, at character offset %d (before \"%s\")",
              dec.err,
-             (int)ptr_to_index (aTHX_ string, dec.cur-SvPVX(string)),
-             dec.cur != dec.end ? SvPV_nolen (uni) : "(end of string)");
+             (int)ptr_to_index (aTHX_ string, dec.cur - SvPVX(string)),
+             dec.cur < dec.end ? SvPV_nolen (uni) : "(end of string)");
     }
 
-  if (!(dec.json.flags & F_ALLOW_NONREF) && json_nonref(aTHX_ sv))
+  if (!(dec.json.flags & F_ALLOW_NONREF) && json_nonref(aTHX_ sv)) {
+    SvREFCNT_dec (sv);
     croak ("JSON text must be an object or array (but found number, string, true, false or null, use allow_nonref to allow this)");
+  }
 
   if (UNLIKELY(converted && !(converted - 1))) /* with BOM, and UTF8 was not set */
     json->flags &= ~F_UTF8;
@@ -4627,7 +4787,8 @@ void END(...)
     PPCODE:
         sv = MY_CXT.sv_json;
         MY_CXT.sv_json = NULL;
-        SvREFCNT_dec_NN(sv);
+        if (sv && SvOK (sv))
+            SvREFCNT_dec_NN (sv);
 	/* skip implicit PUTBACK, returning @_ to caller, more efficient*/
         return;
 
@@ -4669,11 +4830,16 @@ void ascii (JSON *self, int enable = 1)
         allow_dupkeys   = F_ALLOW_DUPKEYS
         require_types   = F_REQUIRE_TYPES
         type_all_string = F_TYPE_ALL_STRING
+        dupkeys_as_arrayref = F_DUPKEYS_AS_AREF
     PPCODE:
         if (enable)
           self->flags |=  ix;
         else
           self->flags &= ~ix;
+        # Turning on DUPKEYS_AS_AREF also turns on ALLOW_DUPKEYS
+        # But turning off DUPKEYS_AS_AREF does not
+        if (ix == F_DUPKEYS_AS_AREF && enable != 0)
+          self->flags |= F_ALLOW_DUPKEYS | F_DUPKEYS_FIRST;
         XPUSHs (ST (0));
 
 void get_ascii (JSON *self)
@@ -4702,6 +4868,7 @@ void get_ascii (JSON *self)
         get_allow_dupkeys   = F_ALLOW_DUPKEYS
         get_require_types   = F_REQUIRE_TYPES
         get_type_all_string = F_TYPE_ALL_STRING
+        get_dupkeys_as_arrayref = F_DUPKEYS_AS_AREF
     PPCODE:
         XPUSHs (boolSV (self->flags & ix));
 
@@ -4964,9 +5131,7 @@ void incr_reset (JSON *self)
 	CODE:
 {
         if (self->incr_text)
-          {
             SvREFCNT_dec (self->incr_text);
-          }
         self->incr_text = NULL;
         self->incr_pos  = 0;
         self->incr_nest = 0;
@@ -4975,10 +5140,17 @@ void incr_reset (JSON *self)
 
 void DESTROY (JSON *self)
 	CODE:
-        SvREFCNT_dec (self->cb_sk_object);
-        SvREFCNT_dec (self->cb_object);
-        SvREFCNT_dec (self->cb_sort_by);
-        SvREFCNT_dec (self->incr_text);
+        if (!json_validate (self))
+            return;
+        # verify cb_sk_object for a valid HV
+        if (self->cb_sk_object && (SvTYPE (self->cb_sk_object) == SVt_PVHV))
+            SvREFCNT_dec (self->cb_sk_object);
+        if (self->cb_object && SvOK (self->cb_object))
+            SvREFCNT_dec (self->cb_object);
+        if (self->cb_sort_by && SvOK (self->cb_sort_by))
+            SvREFCNT_dec (self->cb_sort_by);
+        if (self->incr_text)
+            SvREFCNT_dec (self->incr_text);
 
 PROTOTYPES: ENABLE
 

@@ -2,6 +2,53 @@ Revision history for Perl extension Cpanel::JSON::XS
 
 TODO: http://stevehanov.ca/blog/index.php?id=104 compression
 
+4.37 2023-07-04 (rurban)
+        - Fix NAN/INF for AIX (Tux: AIX-5.3, tested by XSven on AIX-7.3) GH #165
+        - Fix empty string result in object stringification (PR #221 jixam)
+        - Allow \' in strings when allow_singlequote is enabled (PR #217 warpspin)
+
+4.36 2023-03-02 (rurban)
+        - remove the SAVESTACK_POS noop. Merged from JSON-XS-3.02,
+          removed there with 4.0. requested to remove with
+          L<https://github.com/Perl/perl5/pull/20858>
+
+4.35 2023-02-22 (rurban)
+        - fix utf8 object stringification (jixam PR #212)
+
+4.34 2023-02-21 (rurban)
+        - fix c89 compilation regression, for loop init on centos. GH #211
+
+4.33 2023-02-21 (rurban)
+        - fix a security issue, decoding hash keys without ending :
+          (GH #208)
+        - check all bare hash keys for utf8 (GH #209)
+        - improve overload warnings (Graham Knop PR #205)
+        - fix a croak leak (GH #206)
+
+4.32 2022-08-13 (rurban)
+        - fix new JSON::PP::Boolean overload redefinition warnings. GH #200
+
+4.31 2022-08-10 (rurban)
+        - adjust t/20_unknown.t pp bool tests for native bool when supported.
+          GH #198 PR by Graham Knop.
+
+4.30 2022-06-14 (rurban)
+        - Fix perl 5.37 utf8n_to_uvuni deprecation. GH #196
+
+4.29 2022-05-27 (rurban)
+        - Hack: Revert native bool (unblessed) overloads via JSON::PP 4.08.
+          JSON::PP ignores unblessed bools for now. GH #194
+
+4.28 2022-05-05 (rurban)
+        - Validate the JSON struct which might get corrupted by wrong FREEZE/THAW
+          methods, or other serializers, or corrupting our magic object. (GH #192)
+        - Improve our DESTROY and END methods to avoid NULL dereferences.
+          Fixes perl-compiler/#438
+        - Fix 3 tests in t/20_unknown.t with the latest 5.35.10 bool enhancements
+          and JSON::PP (GH #194)
+        - Fix t/118_type.t with Windows ivtype long long. (GH #178)
+        - Added github actions
+
 4.27 2021-10-13 (rurban)
         - Only add -Werror=declaration-after-statement for 5.035004 and earlier (PR #186 nwc)
 	- Fix 125_shared_boolean.t for threads (PR #184 Sinan Unur)

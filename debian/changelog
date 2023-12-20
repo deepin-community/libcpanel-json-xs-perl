@@ -1,3 +1,65 @@
+libcpanel-json-xs-perl (4.37-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.37.
+
+ -- gregor herrmann <gregoa@debian.org>  Mon, 17 Jul 2023 20:14:02 +0200
+
+libcpanel-json-xs-perl (4.36-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.36.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 11 Jun 2023 21:34:50 +0200
+
+libcpanel-json-xs-perl (4.35-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.35.
+  * Declare compliance with Debian Policy 4.6.2.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 25 Feb 2023 02:31:57 +0100
+
+libcpanel-json-xs-perl (4.32-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.32.
+    + really fixes overload warnings with Perl 5.36 and JSON::PP.
+      (Closes: #1016806)
+
+ -- Niko Tyni <ntyni@debian.org>  Sat, 13 Aug 2022 12:16:36 +0300
+
+libcpanel-json-xs-perl (4.31-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.31.
+    Fixes "FTBFS with Perl 5.36: Subroutine JSON::PP::Boolean::(0+ redefined"
+    (Closes: #1016806)
+
+ -- gregor herrmann <gregoa@debian.org>  Wed, 10 Aug 2022 16:43:15 +0200
+
+libcpanel-json-xs-perl (4.30-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.30.
+
+ -- gregor herrmann <gregoa@debian.org>  Sun, 26 Jun 2022 20:01:46 +0200
+
+libcpanel-json-xs-perl (4.29-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.29.
+  * Declare compliance with Debian Policy 4.6.1.
+
+ -- gregor herrmann <gregoa@debian.org>  Fri, 03 Jun 2022 19:34:39 +0200
+
+libcpanel-json-xs-perl (4.28-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.28.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 07 May 2022 20:42:36 +0200
+
 libcpanel-json-xs-perl (4.27-1) unstable; urgency=medium
 
   * Team upload.
