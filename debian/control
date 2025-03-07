@@ -13,7 +13,7 @@ Build-Depends: debhelper-compat (= 13),
                libtie-ixhash-perl <!nocheck>,
                perl-xs-dev,
                perl:native
-Standards-Version: 4.6.2
+Standards-Version: 4.7.0
 Vcs-Browser: https://salsa.debian.org/perl-team/modules/packages/libcpanel-json-xs-perl
 Vcs-Git: https://salsa.debian.org/perl-team/modules/packages/libcpanel-json-xs-perl.git
 Homepage: https://metacpan.org/release/Cpanel-JSON-XS
@@ -21,10 +21,10 @@ Rules-Requires-Root: no
 
 Package: libcpanel-json-xs-perl
 Architecture: any
+Multi-Arch: same
 Depends: ${misc:Depends},
          ${perl:Depends},
          ${shlibs:Depends}
-Multi-Arch: same
 Description: module for fast and correct serialising to JSON
  Cpanel::JSON::XS converts Perl data structures to JSON and vice versa. Its
  primary goal is to be correct and its secondary goal is to be fast. To reach
