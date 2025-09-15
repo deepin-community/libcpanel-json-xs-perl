@@ -1,3 +1,25 @@
+libcpanel-json-xs-perl (4.39-2) unstable; urgency=medium
+
+  * Team upload.
+  * Fix json_atof_scan1 overflows (CVE-2025-40929)
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 08 Sep 2025 21:26:54 +0200
+
+libcpanel-json-xs-perl (4.39-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.39.
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 11 Jan 2025 02:09:43 +0100
+
+libcpanel-json-xs-perl (4.38-1) unstable; urgency=medium
+
+  * Team upload.
+  * Import upstream version 4.38.
+  * Declare compliance with Debian Policy 4.7.0.
+
+ -- gregor herrmann <gregoa@debian.org>  Thu, 30 May 2024 18:47:08 +0200
+
 libcpanel-json-xs-perl (4.37-1) unstable; urgency=medium
 
   * Team upload.
