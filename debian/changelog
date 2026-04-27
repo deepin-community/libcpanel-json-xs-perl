@@ -1,3 +1,9 @@
+libcpanel-json-xs-perl (4.39-1deepin1) unstable; urgency=medium
+
+  * Fix integer buffer overflow in json_atof_scan1 (CVE-2025-40929)
+
+ -- deepin-ci-robot <packages@deepin.org>  Mon, 27 Apr 2026 19:07:41 +0800
+
 libcpanel-json-xs-perl (4.39-1) unstable; urgency=medium
 
   * Team upload.
