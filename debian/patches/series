@@ -1,1 +1,1 @@
-cve_2025_40929.patch
+fix-json_atof_scan1-overflows.patch
